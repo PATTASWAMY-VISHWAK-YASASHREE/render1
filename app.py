@@ -16,6 +16,15 @@ DIABETES_STATES = [
     "Urgent Doctor Visit"
 ]
 
+# Explanations for each state
+EXPLANATIONS = {
+    "Increase Insulin": "Your insulin levels are too low, requiring an increase in dosage.",
+    "Decrease Insulin": "Your insulin levels are too high, requiring a reduction in dosage.",
+    "Maintain Dosage": "Your insulin and glucose levels are stable; continue with your current dosage.",
+    "Lifestyle Change Required": "Your glucose levels indicate a need for diet and exercise adjustments.",
+    "Urgent Doctor Visit": "Your glucose and insulin levels are critically abnormal. Seek medical help immediately."
+}
+
 app = Flask(__name__)
 
 @app.route('/')
@@ -31,14 +40,17 @@ def predict():
         # Convert input to NumPy array (ensure correct shape)
         input_data = np.array(data["features"]).reshape(1, -1)
 
-        # Make prediction
-        prediction = model.predict(input_data)
-        predicted_class = np.argmax(prediction)  # Get the class index
+        # Make prediction (assumes model outputs 5 reward values)
+        prediction = model.predict(input_data)[0]  # Get first (and only) prediction row
 
-        # Get the corresponding state
+        # Get the best state based on max reward
+        predicted_class = np.argmax(prediction)  
+        predicted_state = DIABETES_STATES[predicted_class]
+
         result = {
-            "predicted_state": DIABETES_STATES[predicted_class],
-            "confidence_scores": prediction.tolist()  # Send all class probabilities
+            "predicted_state": predicted_state,
+            "confidence_scores": prediction.tolist(),  # Send all reward values
+            "explanation": EXPLANATIONS[predicted_state]  # Human-readable explanation
         }
 
         return jsonify(result)
@@ -49,5 +61,6 @@ def predict():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-    # Add this at the end of the file
-application = app  # For WSGI compatibility
+
+# Ensure WSGI compatibility for Render
+application = app
