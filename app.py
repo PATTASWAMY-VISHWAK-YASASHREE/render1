@@ -3,9 +3,15 @@ import numpy as np
 import tensorflow as tf
 from flask import Flask, request, jsonify
 
-# Load the trained model
+# Define the custom model class and register it
+@tf.keras.saving.register_keras_serializable()
+class DiabetesModel(tf.keras.Model):
+    def __init__(self, *args, **kwargs):
+        super(DiabetesModel, self).__init__(*args, **kwargs)
+
+# Load the trained model with custom objects
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "diabetes_prediction_model.keras")
-model = tf.keras.models.load_model(MODEL_PATH)
+model = tf.keras.models.load_model(MODEL_PATH, custom_objects={"DiabetesModel": DiabetesModel})
 
 # Define possible diabetes management states
 DIABETES_STATES = [
@@ -34,23 +40,16 @@ def home():
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-        # Expect JSON input
         data = request.get_json()
-
-        # Convert input to NumPy array (ensure correct shape)
         input_data = np.array(data["features"]).reshape(1, -1)
-
-        # Make prediction (assumes model outputs 5 reward values)
-        prediction = model.predict(input_data)[0]  # Get first (and only) prediction row
-
-        # Get the best state based on max reward
+        prediction = model.predict(input_data)[0]
         predicted_class = np.argmax(prediction)  
         predicted_state = DIABETES_STATES[predicted_class]
 
         result = {
             "predicted_state": predicted_state,
-            "confidence_scores": prediction.tolist(),  # Send all reward values
-            "explanation": EXPLANATIONS[predicted_state]  # Human-readable explanation
+            "confidence_scores": prediction.tolist(),
+            "explanation": EXPLANATIONS[predicted_state]
         }
 
         return jsonify(result)
@@ -62,5 +61,4 @@ if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
-# Ensure WSGI compatibility for Render
 application = app
