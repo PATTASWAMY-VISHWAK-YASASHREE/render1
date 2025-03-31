@@ -1,10 +1,12 @@
+
+
 import os
 import numpy as np
 import tensorflow as tf
 from flask import Flask, request, jsonify
 
 # Define the custom model class and register it
-@tf.keras.saving.register_keras_serializable()
+@tf.keras.utils.register_keras_serializable()
 class DiabetesModel(tf.keras.Model):
     def __init__(self, *args, **kwargs):
         super(DiabetesModel, self).__init__(*args, **kwargs)
